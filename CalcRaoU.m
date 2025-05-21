@@ -17,9 +17,8 @@ theta  = phi(s); % solution as points' absolute angles,
 
 %% Produce arc lengths between angles vector theta
 theta_shl = circshift(theta, -1);
-theta_shl_aug = [theta_shl(1:end-1) 2*pi];
-
-% arcs between points ("relative")
+theta_shl_aug = [theta_shl(1:end-1) 2*pi + theta(1)];
+% Compute arcs between points ("relative")
 delta_theta_arcs = theta_shl_aug - theta; %last element is 2*pi - theta(1)
 
 %% Rao's test
