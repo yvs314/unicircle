@@ -11,7 +11,7 @@ Li = Mi + Ki; % total points in solution, and total no. arc segments
 
 %% Prep point locations as angles, just in case
 start_angle = pi / 2; % start position
-phi = (2/double(N))*pi*(0:N-1); % N angles, uniformly distributed on circle
+phi = (2/N)*pi*(0:N-1); % N angles, uniformly distributed on circle
 phi_start = phi + start_angle;
 
 baseline = CalcOptUniform(N, L); % hypthesized "most uniform" for L points
@@ -27,5 +27,13 @@ if(max(p) > N || max(s) > N)
   error("Element above N in p or s");
 end
 
-%PlotSolution(N, p, s);
+if(length(sort(s)) ~= length(unique(sort(s))))
+  error("Nonunique elements in s");
+end
+
+if(length(sort(p)) ~= length(unique(sort(p))))
+  error("Nonunique elements in p");
+end
+
+PlotSolution(N, p, s);
 
