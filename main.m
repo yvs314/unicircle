@@ -1,8 +1,11 @@
-% Total number of points
-N = 8;
-M = 0; % no. pre-placed points
+N = 8; % no. equispaced slots on a circle
+M = 3; % no. occupied slots
 K = 3; % no. points to place
-L = M + K; % total filled slots
+
+p = sort([5 6 7]); % pre-placed elements, indexed 1,...,N
+if(length(p) ~= M || length(unique(p)) ~= M || min(p) < 1 || max(p) > N)
+  error("Invalid input: check pre-placed elements");
+end
 
 Ni = int16(N);
 Mi = int16(M);
@@ -11,12 +14,12 @@ Li = Mi + Ki; % total points in solution, and total no. arc segments
 
 %% Prep point locations as angles, just in case
 start_angle = pi / 2; % start position
-phi = (2/N)*pi*(0:N-1); % N angles, uniformly distributed on circle
-phi_start = phi + start_angle;
+phi_start = (2/N)*pi*(0:N-1) + start_angle; % N equispaced angles on a circle
 
-baseline = CalcOptUniform(N, L); % hypthesized "most uniform" for L points
+ % Heuristic near-uniform if no slots were occupied (if M = 0)
+baseline = CalcHeurUniform(N, L);
 
-p = [5 6 7]; % pre-placed elements
+% s = solve(N, K, p); %solve call placeholder
 s = [1 2 3]; % selected elements
 
 if(~isempty(intersect(p,s)))
@@ -27,7 +30,7 @@ if(max(p) > N || max(s) > N)
   error("Element above N in p or s");
 end
 
-if(length(sort(s)) ~= length(unique(sort(s))))
+if(length(s) ~= length(unique(s)))
   error("Nonunique elements in s");
 end
 

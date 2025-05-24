@@ -1,16 +1,19 @@
-%% Calculate Optimal Uniform distribution
+%% Calculate Heuristic Uniform distribution
 %
-% This function determines the hypothesized (YS) best indices for positioning
-% Indices are assumed (YS) to be the closest to discrete uniform distribution
-% of L points on circle where N equispaced slots are available, $N \geq L$.
-% "Closeness" is considered in Rao's test terms
+% This function determines heuristic uniform distribution for L out of N slots,
+% where N is the total number and L are free to be filled with *no* pre-placed.
 %
-% Rao's test: absolute coordinatewise difference between
-%   * the vector of uniform angles with step 2pi / N
-%   * and input angles (computed from integer positions from 1,...,N)
+% Indices are based on imperfect "discrete uniform" successive arc lengths
+% that are meant to approximate the truly uniform arcs $2\pi / L$ with the N
+% discrete slots available.
+%
+% It is expected (YS) that this solution approaches the true uniform as N increases.
+% It is a perfect solution when N / L is integer (no remainder).
+%
+% Solution quality is in terms of circular mean vector norm,
+% the smaller the better (it ranges 0 to 1), see CalcCircMean.m
 
-
-function baseline = CalcOptUniform (N, L)
+function baseline = CalcHeurUniform (N, L)
 Ni = int16(N); % Total number of slots
 Li = int16(L); % Total points in solution, and total no. arc segments
 
