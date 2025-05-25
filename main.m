@@ -1,6 +1,7 @@
 N = 8; % no. equispaced slots on a circle
 M = 3; % no. occupied slots
 K = 3; % no. points to place
+L = M + K; % no. occupied slots including solution
 
 p = sort([5 6 7]); % pre-placed elements, indexed 1,...,N
 if(length(p) ~= M || length(unique(p)) ~= M || min(p) < 1 || max(p) > N)
@@ -21,6 +22,7 @@ baseline = CalcHeurUniform(N, L);
 
 % s = solve(N, K, p); %solve call placeholder
 s = [1 2 3]; % selected elements
+overall = sort([p s]); % all occupied slots
 
 if(~isempty(intersect(p,s)))
   error("Invalid solution: intersection between pre-placed and selected");
@@ -39,4 +41,8 @@ if(length(sort(p)) ~= length(unique(sort(p))))
 end
 
 PlotSolution(N, p, s);
+r = CalcCircMean(N, overall);
+r_p = CalcCircMean(N, p);
+disp(["Starting mean vector length is " num2str(norm(r_p))]);
+disp(["Solution mean vector length is " num2str(norm(r))]);
 

@@ -1,4 +1,4 @@
-%% Calculate Heuristic Uniform distribution
+%% Calculate Heuristic Uniform distribution on a circle
 %
 % This function determines heuristic uniform distribution for L out of N slots,
 % where N is the total number and L are free to be filled with *no* pre-placed.
