@@ -3,8 +3,10 @@ M = 3; % no. occupied slots
 K = 3; % no. points to place
 L = M + K; % no. occupied slots including solution
 
-p = sort([5 6 7]); % pre-placed elements, indexed 1,...,N
-if(length(p) ~= M || length(unique(p)) ~= M || min(p) < 1 || max(p) > N)
+rho = (M + K) / N; % "occupancy rate" of slots in the overall solution
+
+p = sort([2 5 7]); % pre-placed elements, indexed 1,...,N
+if length(p) ~= M || length(unique(p)) ~= M || min(p) < 1 || max(p) > N
   error("Invalid input: check pre-placed elements");
 end
 
@@ -20,27 +22,83 @@ phi_start = (2/N)*pi*(0:N-1) + start_angle; % N equispaced angles on a circle
  % Heuristic near-uniform if no slots were occupied (if M = 0)
 baseline = CalcHeurUniform(N, L);
 
+%% Find a solution
 % s = solve(N, K, p); %solve call placeholder
-s = [1 2 3]; % selected elements
+% expect p to be sorted
+p_aug = [p N + p(1)];
+p_aug_shl = circshift(p_aug, -1);
+p_segs = p_aug_shl - p_aug;
+slots = (p_segs - 1)(1:end-1);
+
+if sum(slots) ~= N - M
+  error("Invalid result: slot count does not match M - K");
+end
+
+% combined slot counts, start, and end indices
+%C = [slots; demand; extra_slots; p_aug(1:end-1); p_aug_shl(1:end-1)];
+C = [slots; p_aug(1:end-1); p_aug_shl(1:end-1)];
+% C(1,:) is free slots in segment
+% C(2,:) is start indices (first free slot in segment)
+% C(3,:) is end indices (last free slot in segment)
+
+% sortrows(A, [-1]) is Octave for sort by first column descending
+% Matlab equivalent is sortrows(A, 1, "descending")
+% C_sort is C sorted by free slots in each segment, descending
+C_sort = sortrows(C', [-1])';
+% C_sort(1,:) is free slots in segment
+% C_sort(2,:) is start indices (first free slot in segment)
+% C_sort(3,:) is end indices (last free slot in segment)
+
+demand_floor = floor(C_sort(1,:) * rho); % how many points to put into each segment
+% due to floor, at most 1 point per segment could have been left unassigned
+leftover = M - sum(demand_floor);
+
+% where can we stuff the leftover; larger segments come first due to sort
+extra_slots = C_sort(1,:) - demand_floor;
+
+if sum(extra_slots) < leftover
+  error("Can't fit leftover points into available slots");
+end
+
+available_extra_slots = find(extra_slots); % indices of nonzero elements
+% put 1 each into available extra slots until leftover is exhausted
+addenda = [ones(1, leftover) zeros(1, length(available_extra_slots) - leftover)];
+demand = demand_floor + addenda(available_extra_slots);
+
+% insert the demand row into C_sort
+C_demand = [C_sort(1,:); demand; C_sort(2:end,:)]
+% C_demand(1,:) is free slots in segment
+% C_demand(2,:) is "demand" in segment (how many slots to fill)
+% C_demand(3,:) is start indices (first free slot in segment)
+% C_demand(4,:) is end indices (last free slot in segment)
+
+%% All is ready for determining how to uniformly spread demand between start and end
+% For a segment j,
+% Spread C_demand(2,j) between C_demand(3,j) and C_demand(4,j), inclusively
+
+s = [1 3 8]; % selected elements
+
+
+
 overall = sort([p s]); % all occupied slots
 
-if(~isempty(intersect(p,s)))
+if ~isempty(intersect(p,s))
   error("Invalid solution: intersection between pre-placed and selected");
 end
 
-if(max(p) > N || max(s) > N)
+if max(p) > N || max(s) > N
   error("Element above N in p or s");
 end
 
-if(length(s) ~= length(unique(s)))
+if length(s) ~= length(unique(s))
   error("Nonunique elements in s");
 end
 
-if(length(sort(p)) ~= length(unique(sort(p))))
+if length(sort(p)) ~= length(unique(sort(p)))
   error("Nonunique elements in p");
 end
 
-PlotSolution(N, p, s);
+%PlotSolution(N, p, s);
 r = CalcCircMean(N, overall);
 r_p = CalcCircMean(N, p);
 disp(["Starting mean vector length is " num2str(norm(r_p))]);
