@@ -1,87 +1,89 @@
 %% SolveRho
 %
-% Place K points into N - length(p) slots while heuristically attempting to
-% maintain the "occupancy rate" $rho := (M + K) / N$. It is expected that
-% this minimizes the circular mean vector.
+% Разместить K точек в N - length(p) слотов, эвристически поддерживая
+% "удельную заполненность" $rho := (M + K) / N$. Я предполагаю (ЯС), что на больших N
+% это в среднем уменьшает длину вектора кругового среднего.
 %
-% Inputs:
-%   * N (integer) is total number of slots
-%   * K (integer) is how many points to place
-%   * p (sorted vector of unique indices from 1,...,N) is vector of occupied slots
-% Inputs are assumed to be correct, and must be sanitized by the caller.
+% Ввод:
+%   * N (целое) всего мест под точки (слотов)
+%   * K (целое) сколько точек нужно разместить
+%   * p (вектор неповторяющихся индексов из 1,...,N в порядке возрастания) исходно занятые точки
+% Аргументы предполагаются корректными, и должны проверятся перед вызовом.
 %
-% Output: s is a vector of K indices from 1,...,N
+% Вывод: s вектор K индексов K из 1,...,N (не повторяются, идут в порядке возрастания)
 
 function s = SolveRho(N, K, p)
-M = length(p); % no. occupied slots
-L = M + K; % no. occupied slots including solution
-rho = (M + K) / N; % "occupancy rate" of slots in the overall solution
+M = length(p); % число исходно занятых слотов
+L = M + K; % сколько слотов будет занято с учетом решения
+rho = (M + K) / N; % "удельная заполненность" слотов после размещения K точек
 
-%% Find a solution
-% expect p to be sorted
+%% Найдем длины свободных дуг (выражены в числе свободных слотов подряд)
+% принципиальено, чтобы p был упорядочен по возрастанию
 p_aug = [p N + p(1)];
 p_aug_shl = circshift(p_aug, -1);
 p_segs = p_aug_shl - p_aug;
 slots = (p_segs - 1)(1:end-1);
 
 if sum(slots) ~= N - M
-  error("Invalid result: slot count does not match M - K");
+  error("Ошибка расчета: полученное число слотов не совпадает с M - K");
 end
 
-% combined slot counts, start, and end indices
+% Сведем в одну структуру данных длины дуг и индексы начал и концов
 C = [slots; p_aug(1:end-1); p_aug_shl(1:end-1)];
-% C(1,:) is free slots in segment
-% C(2,:) is start indices (slot before first free slot in segment)
-% C(3,:) is end indices (slot after last free slot in segment)
+% C(1,:) длины свободных дуг в слотах
+% C(2,:) индексы начала дуг (слот перед первым свободным слотом в дуге)
+% C(3,:) индексы концов дуг (слот за последним свободным слотом в дуге)
 
-% C_sort is C sorted by free slots in each segment, descending
+% Матрица C_sort упорядочена по длинам свободных дуг *в порядке убывания*
 C_sort = sortrows(C', [-1])';
-% sortrows(A, [-1]) is Octave for sort by first column descending
-% Matlab equivalent is sortrows(A, 1, "descending")
+% Формат sortrows(A, [-1]) это особенность GNU Octave
+% Эквивалент в Matlab будет sortrows(A, 1, "descending")
 
-%% Allocate K points to the available slots in segments
-demand_floor = floor(C_sort(1,:) * rho); % how many points to put into each segment
-% due to floor, some have been left unassigned
+%% Распределим K по свободным дугам сообразно желаемой "удельной заполненности"
+demand_floor = floor(C_sort(1,:) * rho);
+% Из-за округления до наименьшего целого числа, не все удалось разместить сразу
 leftover = K - sum(demand_floor);
 
-% Where can we stuff the leftover; larger segments come first due to sort order
+% Определим, в какие дуги можно разместить остаток;
+% Предпочтение отдается более длинным дугам, благодаря порядку сортировки
 extra_slots = C_sort(1,:) - demand_floor;
 
 if sum(extra_slots) < leftover
-  error("Can't fit leftover points into available slots");
+  error("Недостаточно слотов для размещения остатка");
 end
 
-available_extra_slots = find(extra_slots); % indices of nonzero elements
-% put 1 each into available extra slots until leftover is exhausted
+available_extra_slots = find(extra_slots); % индексы дуг куда еще можно добавить точки
+% Разместим по одной точке в каждую дугу, начиная с наибольших, покуда не выставим весь остаток
 addenda = available_extra_slots(1:leftover);
 extd_addenda = zeros(size(extra_slots));
 extd_addenda(addenda) = 1;
-% final allocation of points to segments
+% Итоговое распределение выставляемых точек по дугам
 demand = demand_floor + extd_addenda;
 
-% insert the demand row into C_sort
+% Вставим строку с числом выставляемых точек в матрицу C_sort
+% (этап не нужен в продуктивном коде, но удобен в отладке)
 C_demand = [C_sort(1,:); demand; C_sort(2:end,:)]
-% C_demand(1,:) is free slots in segment
-% C_demand(2,:) is "demand" in segment (how many slots to fill)
-% C_demand(3,:) is start indices (slot before first free slot in segment)
-% C_demand(4,:) is end indices (slot after last free slot in segment)
+% C_demand(1,:) длины свободных дуг в слотах
+% C_demand(2,:) число точек к размещению в свободные дуги (сколько слотов надлежит заполнить)
+% C_demand(3,:) индексы начала дуг (слот перед первым свободным слотом в дуге)
+% C_demand(4,:) индексы концов дуг (слот за последним свободным слотом в дуге)
 
-%% All is ready for determining how to uniformly spread allocated demand
-% For a segment j,
-% Spread C_demand(2,j) between C_demand(3,j) and C_demand(4,j), exclusively
-% This is done by translating CalcHeurUniformSegment
-% between C_demand(3,j) to C_demand(4,j)
-% with C_demand(1,j) as total slots and C_demand(2,j) as points to fill in
-s_acc = []; % start with empty vector
+%% Все готово для равномерного распределения точек по свободным дугам
+% Для дуги с индексом j,
+% Распределим C_demand(2,j) точек между C_demand(3,j) C_demand(4,j), не включительно.
+% Обеспечивается трансляцией индексов расчитываемых CalcHeurUniformSegment
+% в диапазон от C_demand(3,j) до C_demand(4,j) с очетом перехода на новый оборот
 
-for column = 1:size(C_demand,2) % for each column
+s_acc = []; % начнем с пустого вектора
+
+for column = 1:size(C_demand,2) % для каждого столбца матрицы C_demand
   w = CalcHeurUniformSegment(C_demand(1,column), C_demand(2,column));
-  s_acc = [s_acc w + C_demand(3,column)];
+  s_acc = [s_acc w + C_demand(3,column)]; % добавим рассчитанные индексы
 end
 
-%% Finalize indexing and sort
-% s_acc - 1 switches to 0-indexing, for compatibility with mod N (N mod N is 0)
-% adding + 1 to results of mod N restores 1-indexing
+%% Финальная обработка индексов: учет перехода на следующий оборот и сортировка
+% s_acc - 1 переводит в индексирование с нуля, которое совместимо с операцией mod N (N mod N будет 0)
+% затем индексы снова увеличены на 1 чтобы вернуться к индексации с единицы
 s = sort(mod(s_acc - 1,N) + 1)
 
 end

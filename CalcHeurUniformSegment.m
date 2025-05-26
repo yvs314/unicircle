@@ -1,44 +1,43 @@
-%% Calculate Heuristic Uniform distribution on a segment
+%% CalcHeurUniform Эвристический расчет равномерного распределения на отрезке
 %
-% This function determines heuristic uniform distribution for L points out of N slots
+% Функция рассчитывает "эвристически равномерное" распределение L точек по N слотам
 %
-% The points and slots are located on a line segment (stand-in for arc segment)
-% equispaced from 1 to N. Slots 0 and N+1 are assumed to be taken, and segments
-% [0, first_point] and [last_point N+1] are taken into account when distributing
-% the points on the segment.
+% Точки и слоты расположены на отрезке (аналогично дуге окружности);
+% слоты выставлены на равных расстояниях, от 1 до N.
+% Предполагается, что "соседние" слоты 0 и N+1 заняты, а расстояния
+% [0, первая_точка] и [последняя_точка N+1] принимаются в расчет при распределении
+% точек по всему отрезку. Получается L + 1 отрезков между L точками.
 %
-% In this statement, the L point positions define L + 1 segments
 
-% It is expected (YS) that this solution approaches the true uniform as N increases.
-% It is a perfect solution when N + 1 / L + 1 is integer (no remainder).
+% Я ожидаю (ЯС), что с ростом N это решение приближается к (непрерывному) равномерному распределению.
+% Решение точное, когда N + 1 нацело делится на L + 1.
 %
-% Solution quality is mean segment length, compared with N + 1 / L + 1, which
-% is the "ideal" case possible if the L points were on continuous [1, N]
-% rather than on the discrete 1,...,N.
+% Критерий качества решения здесь средняя длина отрезка, в сравнении с $N + 1 / L + 1$,
+% соответствующему непрерывному равномерному распределению
 
 function w = CalcHeurUniformSegment (N, L)
 
 if(N < L)
-  error("Too many points for available slots");
+  error("Точек больше, чем мест под них");
 end
 
-Ni = int16(N); % Total number of slots
-supp = 0:N+1; % 0 and N+1 are occupied; 1,...,N are open slots
-Li = int16(L); % Total points in solution
-seg_count = Li+1; % 0-> L points -> N+1 make for L+1 segments
+Ni = int16(N); % Всего слотов
+supp = 0:N+1; % Слоты 0 и N+1 заняты; слоты 1,...,N свободны
+Li = int16(L); % Всего точек в решении
+seg_count = Li+1; % при размещении 0-> L точек -> N+1 будет L+1 отрезков
 
 base_seg_length = idivide(Ni+1, Li+1);
-remainder = mod(Ni+1, Li+1); % how much to distribute among arcs, one to each
+remainder = mod(Ni+1, Li+1); % осталось еще распределить между отрезками
 
-% Base segment length is Ni + 1 / Li + 1 (integer quotient), spread evenly
+% Базовая длина отрезка: Ni + 1 / Li + 1 (частное при делении нацело)
 rep_base = repmat(base_seg_length, 1, Li + 1);
-% Spread the remainder evenly, one per segment, until used up
+% Остаток от деления распределим по 1 на каждый отрезок, пока не используем весь
+% Апгрейд (не реализовано): вместо концентрации в начале, распределить нули и единицы равномерно
 addendum = [ones(1, remainder), zeros(1, Li + 1 - remainder)];
 
-% Heuristic discrete uniform segment lengths.
-% Naturally sorted in descending order.
+% "Эвристически равномерные" длины отрезков (более длинные вначале)
 seg_lengths = rep_base + addendum;
 
-% Get point indices from segment lengths, ignoring 0 and N+1
+% Получим номера L точек из длин отрезков; отбросим "технические" 0 и N+1
 w = cumsum([0 seg_lengths])(2:end-1);
 end

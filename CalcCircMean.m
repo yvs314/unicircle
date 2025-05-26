@@ -1,9 +1,9 @@
-%% Calculate Circular Mean Vector and its length
+%% CalcCircMean Расчет вектора кругового среднего
 %
-% N is the total number of equispaced slots on a circle
-% a is a sorted vector of unique numbers from 1,...,N
+% N количество слотов на окружности (на равных расстояниях)
+% a сортированный в порядке возрастания вектор индексов из 1,...,N
 %
-% r is the circular mean vector
+% r вектор кругового среднего
 function r = CalcCircMean (N, a)
 start_angle = pi / 2; % start position
 phi_start = (2/N)*pi*(0:N-1) + start_angle;

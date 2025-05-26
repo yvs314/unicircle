@@ -1,40 +1,40 @@
-N = 12; % no. equispaced slots on a circle
+N = 12; % количество мест (слотов) под точки
 
-p = sort([1 3 6 7]); % pre-placed elements, indexed 1,...,N
-M = length(p); % no. occupied slots
-K = 5; % no. points to place
-L = M + K; % no. occupied slots including solution
+p = sort([1 3 6 7]); % индексы занятых слотов (из 1,...,N)
+M = length(p); % сколько слотов занято
+K = 5; % сколько точек выставить
+L = M + K; % сколько слотов будет занято в итоге
 
-rho = (M + K) / N; % "occupancy rate" of slots in the overall solution
+rho = (M + K) / N; % "удельная заполненность" слотов в общей расстановке
 
 if length(p) ~= M || length(unique(p)) ~= M || min(p) < 1 || max(p) > N
-  error("Invalid input: check pre-placed elements");
+  error("Ошибка ввода: проверьте вектор занятых слотов");
 end
 
-%% Find a solution
+%% Найдем решение
 s = SolveRho(N, K, p);
 
 if ~isempty(intersect(p,s))
-  error("Invalid solution: intersection between pre-placed and selected");
+  error("Недопустимое решение: нашелся индекс, принадлежащий и решению и вектору занятых слотов");
 end
 
 if max(p) > N || max(s) > N
-  error("Element above N in p or s");
+  error("Обнаружен индекс более N в p  или s");
 end
 
 if length(s) ~= length(unique(s))
-  error("Nonunique elements in s");
+  error("Недопустимое решение: в s найдены повторяющиеся индексы");
 end
 
 if length(sort(p)) ~= length(unique(sort(p)))
-  error("Nonunique elements in p");
+  error("Недопустимое решение: в p найдены повторяющиеся индексы");
 end
 
-overall = sort([p s]); % all occupied slots
+overall = sort([p s]); % общая расстановка (исходно занятые плюс решение)
 
 PlotSolution(N, p, s);
 r = CalcCircMean(N, overall);
 r_p = CalcCircMean(N, p);
-disp(["Starting mean vector length is " num2str(norm(r_p))]);
-disp(["Solution mean vector length is " num2str(norm(r))]);
+disp(["Длина кругового среднего вектора для исходно занятых слотов: " num2str(norm(r_p))]);
+disp(["Длина кругового среднего вектора для общей расстановки: " num2str(norm(r))]);
 
