@@ -1,11 +1,12 @@
-N = 8; % no. equispaced slots on a circle
-M = 3; % no. occupied slots
-K = 3; % no. points to place
+N = 16; % no. equispaced slots on a circle
+
+p = sort([1 3 6 7]); % pre-placed elements, indexed 1,...,N
+M = length(p); % no. occupied slots
+K = 5; % no. points to place
 L = M + K; % no. occupied slots including solution
 
 rho = (M + K) / N; % "occupancy rate" of slots in the overall solution
 
-p = sort([2 5 7]); % pre-placed elements, indexed 1,...,N
 if length(p) ~= M || length(unique(p)) ~= M || min(p) < 1 || max(p) > N
   error("Invalid input: check pre-placed elements");
 end
@@ -50,8 +51,8 @@ C_sort = sortrows(C', [-1])';
 % C_sort(3,:) is end indices (last free slot in segment)
 
 demand_floor = floor(C_sort(1,:) * rho); % how many points to put into each segment
-% due to floor, at most 1 point per segment could have been left unassigned
-leftover = M - sum(demand_floor);
+% due to floor, some have been left unassigned
+leftover = K - sum(demand_floor);
 
 % where can we stuff the leftover; larger segments come first due to sort
 extra_slots = C_sort(1,:) - demand_floor;
@@ -62,25 +63,36 @@ end
 
 available_extra_slots = find(extra_slots); % indices of nonzero elements
 % put 1 each into available extra slots until leftover is exhausted
-addenda = [ones(1, leftover) zeros(1, length(available_extra_slots) - leftover)];
-demand = demand_floor + addenda(available_extra_slots);
+addenda = available_extra_slots(1:leftover);
+extd_addenda = zeros(size(extra_slots));
+extd_addenda(addenda) = 1;
+
+demand = demand_floor + extd_addenda;
 
 % insert the demand row into C_sort
 C_demand = [C_sort(1,:); demand; C_sort(2:end,:)]
 % C_demand(1,:) is free slots in segment
 % C_demand(2,:) is "demand" in segment (how many slots to fill)
-% C_demand(3,:) is start indices (first free slot in segment)
-% C_demand(4,:) is end indices (last free slot in segment)
+% C_demand(3,:) is start indices (slot before first free slot in segment)
+% C_demand(4,:) is end indices (slot after last free slot in segment)
 
-%% All is ready for determining how to uniformly spread demand between start and end
+%% All is ready for determining how to uniformly spread allotted demand
 % For a segment j,
 % Spread C_demand(2,j) between C_demand(3,j) and C_demand(4,j), inclusively
+% This is done by translating CalcHeurUniformSegment
+% between C_demand(3,j) to C_demand(4,j)
+% with C_demand(1,j) as total slots and C_demand(2,j) as points to fill in
+s_acc = []; % start as empty vector
 
-s = [1 3 8]; % selected elements
+for column = 1:size(C_demand,2) % for each column
+  w = CalcHeurUniformSegment(C_demand(1,column), C_demand(2,column));
+  s_acc = [s_acc w + C_demand(3,column)];
+end
 
-
-
-overall = sort([p s]); % all occupied slots
+%% Finalize indexing and sort
+% s_acc - 1 switches to 0-indexing, for compatibility with mod N (N mod N is 0)
+% adding + 1 to results of mod N restores 1-indexing
+s = sort(mod(s_acc - 1,N) + 1)
 
 if ~isempty(intersect(p,s))
   error("Invalid solution: intersection between pre-placed and selected");
@@ -98,7 +110,9 @@ if length(sort(p)) ~= length(unique(sort(p)))
   error("Nonunique elements in p");
 end
 
-%PlotSolution(N, p, s);
+overall = sort([p s]); % all occupied slots
+
+PlotSolution(N, p, s);
 r = CalcCircMean(N, overall);
 r_p = CalcCircMean(N, p);
 disp(["Starting mean vector length is " num2str(norm(r_p))]);
